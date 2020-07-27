@@ -41,7 +41,6 @@ declare module Ammo {
         constructor();
         constructor(x: number, y: number, z: number, w: number);
         w(): number;
-        setValue(x: number, y: number, z: number): void;
         setValue(x: number, y: number, z: number, w: number): void;
     }
     class btQuadWord {
@@ -104,6 +103,7 @@ declare module Ammo {
         set_m_graphicsWorldTrans(m_graphicsWorldTrans: btTransform): void;
     }
     class btCollisionObject {
+        constructor();
         setAnisotropicFriction(anisotropicFriction: btVector3, frictionMode: number): void;
         getCollisionShape(): btCollisionShape;
         setContactProcessingThreshold(contactProcessingThreshold: number): void;
@@ -132,6 +132,7 @@ declare module Ammo {
         getUserPointer(): unknown;
         setUserPointer(userPointer: unknown): void;
         getBroadphaseHandle(): btBroadphaseProxy;
+        setIgnoreCollisionCheck(co: btCollisionObject, ignoreCollisionCheck: boolean): void;
     }
     class btCollisionObjectWrapper {
         getWorldTransform(): btTransform;
@@ -202,6 +203,10 @@ declare module Ammo {
         set_m_userPersistentData(m_userPersistentData: any): void;
     }
     class ContactResultCallback {
+        get_m_collisionFilterGroup(): number;
+        set_m_collisionFilterGroup(m_collisionFilterGroup: number): void;
+        get_m_collisionFilterMask(): number;
+        set_m_collisionFilterMask(m_collisionFilterMask: number): void;
         addSingleResult(cp: btManifoldPoint, colObj0Wrap: btCollisionObjectWrapper, partId0: number, index0: number, colObj1Wrap: btCollisionObjectWrapper, partId1: number, index1: number): number;
     }
     class ConcreteContactResultCallback {
@@ -246,6 +251,17 @@ declare module Ammo {
         set_m_hitNormalWorld(m_hitNormalWorld: btVector3): void;
         get_m_hitPointWorld(): btVector3;
         set_m_hitPointWorld(m_hitPointWorld: btVector3): void;
+        get_m_hitCollisionObject(): btCollisionObject;
+        set_m_hitCollisionObject(m_hitCollisionObject: btCollisionObject): void;
+    }
+    class btClosestNotMeConvexResultCallback extends ClosestConvexResultCallback {
+        constructor(me: btCollisionObject, convexFromWorld: btVector3, convexToWorld: btVector3, pairCache: btOverlappingPairCache, dispatcher: btDispatcher);
+        get_m_me(): btCollisionObject;
+        set_m_me(m_me: btCollisionObject): void;
+        get_m_pairCache(): btOverlappingPairCache;
+        set_m_pairCache(m_pairCache: btOverlappingPairCache): void;
+        get_m_dispatcher(): btDispatcher;
+        set_m_dispatcher(m_dispatcher: btDispatcher): void;
     }
     class btCollisionShape {
         setLocalScaling(scaling: btVector3): void;
@@ -443,7 +459,7 @@ declare module Ammo {
     }
     class btCollisionConfiguration {
     }
-    class btDbvtBroadphase extends btBroadphaseInterface {
+    class btDbvtBroadphase {
         constructor();
     }
     class btBroadphaseProxy {
@@ -513,7 +529,6 @@ declare module Ammo {
         getGravity(): btVector3;
         setGravity(acceleration: btVector3): void;
         getBroadphaseProxy(): btBroadphaseProxy;
-        clearForces(): void;
     }
     class btConstraintSetting {
         constructor();
@@ -645,6 +660,8 @@ declare module Ammo {
         getDebugDrawer(): btIDebugDraw;
         debugDrawWorld(): void;
         debugDrawObject(worldTransform: btTransform, shape: btCollisionShape, color: btVector3): void;
+        getForceUpdateAllAabbs(): boolean;
+        setForceUpdateAllAabbs(forceUpdateAllAabbs: boolean): void;
     }
     class btContactSolverInfo {
         get_m_splitImpulse(): boolean;
@@ -654,12 +671,10 @@ declare module Ammo {
         get_m_numIterations(): number;
         set_m_numIterations(m_numIterations: number): void;
     }
-    type btInternalTickCallback = (world: btDynamicsWorld, timeStep: number) => void;
     class btDynamicsWorld extends btCollisionWorld {
         addAction(action: btActionInterface): void;
         removeAction(action: btActionInterface): void;
         getSolverInfo(): btContactSolverInfo;
-        setInternalTickCallback(cb: btInternalTickCallback, worldUserInfo?: unknown, isPreTick?: boolean): void;
     }
     class btDiscreteDynamicsWorld extends btDynamicsWorld {
         constructor(dispatcher: btDispatcher, pairCache: btBroadphaseInterface, constraintSolver: btConstraintSolver, collisionConfiguration: btCollisionConfiguration);
@@ -674,6 +689,7 @@ declare module Ammo {
         setContactAddedCallback(funcpointer: number): void;
         setContactProcessedCallback(funcpointer: number): void;
         setContactDestroyedCallback(funcpointer: number): void;
+        activateContactAddedCallbackAdjustInternalEdgeContacts(): void;
     }
     class btVehicleTuning {
         constructor();
@@ -887,18 +903,6 @@ declare module Ammo {
         get_m_gravity(): btVector3;
         set_m_gravity(m_gravity: btVector3): void;
     }
-    class Face {
-        get_m_n(): ReadonlyArray<Node>;
-        set_m_n(m_n: ReadonlyArray<Node>): void;
-        get_m_normal(): btVector3;
-        set_m_normal(m_normal: btVector3): void;
-        get_m_ra(): number;
-        set_m_ra(m_ra: number): void;
-    }
-    class tFaceArray {
-        size(): number;
-        at(n: number): Face;
-    }
     class Node {
         get_m_x(): btVector3;
         set_m_x(m_x: btVector3): void;
@@ -1014,8 +1018,6 @@ declare module Ammo {
         set_m_cfg(m_cfg: Config): void;
         get_m_nodes(): tNodeArray;
         set_m_nodes(m_nodes: tNodeArray): void;
-        get_m_faces(): tFaceArray;
-        set_m_faces(m_faces: tFaceArray): void;
         get_m_materials(): tMaterialArray;
         set_m_materials(m_materials: tMaterialArray): void;
         get_m_anchors(): tAnchorArray;
@@ -1070,5 +1072,21 @@ declare module Ammo {
         CreateEllipsoid(worldInfo: btSoftBodyWorldInfo, center: btVector3, radius: btVector3, res: number): btSoftBody;
         CreateFromTriMesh(worldInfo: btSoftBodyWorldInfo, vertices: ReadonlyArray<number>, triangles: ReadonlyArray<number>, ntriangles: number, randomizeConstraints: boolean): btSoftBody;
         CreateFromConvexHull(worldInfo: btSoftBodyWorldInfo, vertices: btVector3, nvertices: number, randomizeConstraints: boolean): btSoftBody;
+    }
+    class btTriangleInfoMap {
+        constructor();
+        generateInternalEdgeInfo(trimeshShape: btBvhTriangleMeshShape): void;
+        get_m_convexEpsilon(): number;
+        set_m_convexEpsilon(m_convexEpsilon: number): void;
+        get_m_planarEpsilon(): number;
+        set_m_planarEpsilon(m_planarEpsilon: number): void;
+        get_m_equalVertexThreshold(): number;
+        set_m_equalVertexThreshold(m_equalVertexThreshold: number): void;
+        get_m_edgeDistanceThreshold(): number;
+        set_m_edgeDistanceThreshold(m_edgeDistanceThreshold: number): void;
+        get_m_maxEdgeAngleThreshold(): number;
+        set_m_maxEdgeAngleThreshold(m_maxEdgeAngleThreshold: number): void;
+        get_m_zeroAreaThreshold(): number;
+        set_m_zeroAreaThreshold(m_zeroAreaThreshold: number): void;
     }
 }
